@@ -3,6 +3,10 @@ project(legged_controllers)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+## libtorch path
+## TODO: change absolute path to param
+set(Torch_DIR /home/luohx/Library/libtorch/share/cmake/Torch)
+
 ## Find catkin macros and libraries
 find_package(catkin REQUIRED
         COMPONENTS
@@ -17,6 +21,7 @@ find_package(catkin REQUIRED
         angles
         )
 
+find_package(Torch REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(pinocchio REQUIRED pinocchio)
 
@@ -45,6 +50,7 @@ include_directories(
         include
         ${catkin_INCLUDE_DIRS}
         ${pinocchio_INCLUDE_DIRS}
+        ${TORCH_INCLUDE_DIRS}
 )
 
 link_directories(
@@ -63,6 +69,16 @@ target_link_libraries(${PROJECT_NAME}
 
 target_compile_options(${PROJECT_NAME} PUBLIC ${OCS2_CXX_FLAGS})
 
+add_library(rl_${PROJECT_NAME}
+        src/legged_rl_controller.cpp
+        )
+
+target_link_libraries(rl_${PROJECT_NAME}
+        ${catkin_LIBRARIES}
+        ${pinocchio_LIBRARIES}
+        ${TORCH_LIBRARIES}
+        )
+set_property(TARGET rl_${PROJECT_NAME} PROPERTY CXX_STANDARD 14)
 
 # Target trajectories publish node
 add_executable(legged_target_trajectories_publisher
@@ -103,8 +119,20 @@ install(TARGETS ${PROJECT_NAME}
         RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
         )
 
+install(TARGETS rl_${PROJECT_NAME}
+        ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+        LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+        RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+        )
+
 # Mark cpp header files for installation
 install(DIRECTORY include/${PROJECT_NAME}/
         DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
         FILES_MATCHING PATTERN "*.h"
         )
+
+# Mark other files for installation
+install(
+        FILES legged_rl_controllers_plugins.xml
+        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+)
