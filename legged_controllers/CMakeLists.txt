@@ -80,6 +80,21 @@ target_link_libraries(rl_${PROJECT_NAME}
         )
 set_property(TARGET rl_${PROJECT_NAME} PROPERTY CXX_STANDARD 14)
 
+# RL policy node
+add_executable(rl_policy_node
+        src/rl_policy_node.cpp
+        )
+add_dependencies(rl_policy_node
+        ${PROJECT_NAME}
+        ${catkin_EXPORTED_TARGETS}
+        )
+target_link_libraries(rl_policy_node
+        ${PROJECT_NAME}
+        ${catkin_LIBRARIES}
+        ${TORCH_LIBRARIES}
+        )
+set_property(TARGET rl_policy_node PROPERTY CXX_STANDARD 14)
+
 # Target trajectories publish node
 add_executable(legged_target_trajectories_publisher
         src/TargetTrajectoriesPublisher.cpp
