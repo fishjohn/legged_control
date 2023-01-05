@@ -7,6 +7,7 @@
     <arg name="reference_file" default="$(find legged_controllers)/config/reference.info"/>
     <arg name="urdf_file" default="$(find unitree_description)/urdf/a1.urdf"/>
     <arg name="gait_file" default="$(find legged_controllers)/config/gait.info"/>
+    <arg name="rl_config_file" default="a1_config.yaml"/>
 
     <!-- make the files into global parameters -->
     <param name="task_file" value="$(arg task_file)"/>
@@ -15,6 +16,7 @@
 
     <param name="gaitCommandFile" value="$(arg gait_file)"/>
     <rosparam file="$(find legged_controllers)/config/default.yaml" command="load"/>
+    <rosparam file="$(find legged_controllers)/config/rl_config/$(arg rl_config_file)" command="load"/>
 
     <node if="$(arg cheater)" name="controller_loader" pkg="controller_manager" type="controller_manager"
           output="screen" args="load
@@ -35,4 +37,6 @@
 
     <node pkg="legged_controllers" type="legged_target_trajectories_publisher" name="legged_robot_target"
           output="screen"/>
+
+    <node pkg="legged_controllers" type="rl_policy_node" name="rl_policy_node" output="screen"/>
 </launch>
