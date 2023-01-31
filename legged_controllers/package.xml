@@ -7,9 +7,9 @@
     <license>BSD</license>
     <author email="liaoqiayuan@gmail.com">Qiayuan Liao</author>
 
-    <!-- buildtool_depend: dependencies of the build process -->
     <buildtool_depend>catkin</buildtool_depend>
-    <!-- depend: build, export, and execution dependency -->
+
+    <build_depend>cmake_clang_tools</build_depend>
     <depend>roscpp</depend>
     <depend>legged_common</depend>
     <depend>legged_interface</depend>
@@ -18,6 +18,8 @@
 
     <depend>controller_interface</depend>
     <depend>ocs2_legged_robot_ros</depend>
+    <depend>ocs2_self_collision_visualization</depend>
+
     <depend>angles</depend>
 
     <exec_depend>controller_manager</exec_depend>

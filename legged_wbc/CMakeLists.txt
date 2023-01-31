@@ -1,21 +1,20 @@
 cmake_minimum_required(VERSION 3.10)
 project(legged_wbc)
 
-## Use C++14
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(catkin REQUIRED
         COMPONENTS
         roscpp
-        legged_interface
-        qpoases_catkin
+        ocs2_legged_robot
         )
 
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(pinocchio REQUIRED pinocchio)
+
+find_package(eiquadprog REQUIRED)
 
 catkin_package(
         INCLUDE_DIRS
@@ -24,6 +23,7 @@ catkin_package(
         ${PROJECT_NAME}
         CATKIN_DEPENDS
         roscpp
+        ocs2_legged_robot
         DEPENDS
         pinocchio
 )
@@ -44,16 +44,33 @@ link_directories(
 )
 
 add_library(${PROJECT_NAME}
-        src/ho_qp.cpp
-        src/wbc.cpp
+        src/HoQp.cpp
+        src/WbcBase.cpp
+        src/HierarchicalWbc.cpp
+        src/WeightedWbc.cpp
         )
 
 target_link_libraries(${PROJECT_NAME}
         ${catkin_LIBRARIES}
         ${pinocchio_LIBRARIES}
+        eiquadprog::eiquadprog
         )
 
 target_compile_options(${PROJECT_NAME} PUBLIC ${OCS2_CXX_FLAGS})
+
+#########################
+###   CLANG TOOLING   ###
+#########################
+find_package(cmake_clang_tools QUIET)
+if (cmake_clang_tools_FOUND)
+    message(STATUS "Run clang tooling for target " ${PROJECT_NAME})
+    add_clang_tooling(
+            TARGETS ${PROJECT_NAME}
+            SOURCE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include
+            CT_HEADER_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include
+            CF_WERROR
+    )
+endif (cmake_clang_tools_FOUND)
 
 #############
 ## Install ##
@@ -77,7 +94,7 @@ install(DIRECTORY include/${PROJECT_NAME}/
 #############
 if (CATKIN_ENABLE_TESTING)
     catkin_add_gtest(${PROJECT_NAME}_test
-            test/ho_qp_test.cpp
+            test/HoQp_test.cpp
             )
 
     target_link_libraries(${PROJECT_NAME}_test
@@ -85,4 +102,6 @@ if (CATKIN_ENABLE_TESTING)
             ${pinocchio_LIBRARIES}
             gtest_main
             )
+
+    target_compile_options(${PROJECT_NAME}_test PUBLIC ${FLAGS})
 endif (CATKIN_ENABLE_TESTING)
