@@ -7,6 +7,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 ## TODO: change absolute path to param
 set(Torch_DIR /home/luohx/Library/libtorch/share/cmake/Torch)
 
+## libtorch path
+## TODO: change absolute path to param
+set(Torch_DIR /home/luohx/Library/libtorch/share/cmake/Torch)
+
 ## Find catkin macros and libraries
 find_package(catkin REQUIRED
         COMPONENTS
