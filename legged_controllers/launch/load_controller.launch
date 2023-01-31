@@ -29,7 +29,6 @@
           output="screen" args="load
           controllers/joint_state_controller
           controllers/legged_controller
-          controllers/legged_rl_controller
 "/>
 
     <node pkg="ocs2_legged_robot_ros" type="legged_robot_gait_command" name="legged_robot_gait_command"
@@ -38,5 +37,4 @@
     <node pkg="legged_controllers" type="legged_target_trajectories_publisher" name="legged_robot_target"
           output="screen"/>
 
-    <node pkg="legged_controllers" type="rl_policy_node" name="rl_policy_node" output="screen"/>
 </launch>
