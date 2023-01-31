@@ -47,5 +47,9 @@ qtcreator-*
 # Emacs
 .#*
 
+# jetbrain
+.idea/
+cmake-build-debug/
+
 # Catkin custom files
 CATKIN_IGNORE
