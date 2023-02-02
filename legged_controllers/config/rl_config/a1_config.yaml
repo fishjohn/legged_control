@@ -36,5 +36,9 @@ LeggedRobotCfg:
       dof_vel : 0.05
       height_measurements : 5.0
 
+  size:
+    actions_size : 12
+    observations_size : 235
+
 module:
   module_path : "/home/luohx/catkin_ws/src/legged_control/legged_controllers/policy/policy_1.onnx"

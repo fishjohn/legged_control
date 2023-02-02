@@ -96,21 +96,21 @@ public:
   void stopping(const ros::Time& time) override;
 
 protected:
-  void loadPolicyModel(const std::string& policy_file_path);
-  std::vector<tensor_element_t> computeInput(std::vector<tensor_element_t>& obs);
-
   bool parseCfg(ros::NodeHandle& nh);
-  std::vector<float> computeObservation(const ros::Time& time, const ros::Duration& period);
+
+  void loadPolicyModel(const std::string& policy_file_path);
+
+  void computeActions();
+  void computeObservation(const ros::Time& time, const ros::Duration& period);
 
   void baseStateRecCallback(const gazebo_msgs::ModelStates& msg);
 
 //  std::shared_ptr<LeggedInterface> legged_interface_;
   std::shared_ptr<StateEstimateBase> state_estimate_;
 
-  SystemObservation current_observation_;
+  std::vector<scalar_t> init_joint_angles_;
   std::vector<HybridJointHandle> hybrid_joint_handles_;
   hardware_interface::ImuSensorHandle imu_sensor_handle_;
-  std::vector<scalar_t> init_joint_angles_;
 
 private:
   std::atomic_bool controller_running_;
@@ -119,7 +119,6 @@ private:
 
   // publisher & subscriber
   ros::Subscriber base_state_sub_;
-  std::shared_ptr<realtime_tools::RealtimePublisher<std_msgs::Float32MultiArray>> obs_pub_;
 
   // stand
   scalar_t stand_percent_;
@@ -134,9 +133,13 @@ private:
   std::vector<std::vector<int64_t>> input_shapes_;
   std::vector<std::vector<int64_t>> output_shapes_;
 
+  int actions_size_;
+  int observation_size_;
+  std::vector<tensor_element_t> actions_;
+  std::vector<tensor_element_t> observations_;
+
   // temp state
   RobotCfg robot_cfg_{};
-  std::vector<tensor_element_t> actions_;
   Eigen::Matrix<scalar_t, 3, 1> command_;
   Eigen::Matrix<scalar_t, 3, 1> base_lin_vel_;
   Eigen::Matrix<scalar_t, 3, 1> base_position_;

@@ -25,15 +25,8 @@ bool LeggedRLController::init(hardware_interface::RobotHW *robot_hw, ros::NodeHa
     ROS_ERROR_STREAM("Get robot config fail from param server, some error occur!");
     return false;
   }
-
-  // Hardware interface
-  auto *hybrid_joint_interface = robot_hw->get<HybridJointInterface>();
-  std::vector<std::string> joint_names{"LF_HAA", "LF_HFE", "LF_KFE", "RF_HAA", "RF_HFE", "RF_KFE",
-                                       "LH_HAA", "LH_HFE", "LH_KFE", "RH_HAA", "RH_HFE", "RH_KFE"};
-  for (const auto &joint_name : joint_names)
-    hybrid_joint_handles_.push_back(hybrid_joint_interface->getHandle(joint_name));
-
-  imu_sensor_handle_ = robot_hw->get<hardware_interface::ImuSensorInterface>()->getHandle("unitree_imu");
+  actions_.resize(actions_size_);
+  observations_.resize(observation_size_);
 
   // state init
   command_.setZero();
@@ -49,6 +42,15 @@ bool LeggedRLController::init(hardware_interface::RobotHW *robot_hw, ros::NodeHa
   for (size_t i = 0; i < default_joint_angles.size(); i++) {
     default_joint_angles_(i, 0) = default_joint_angles[i];
   }
+
+  // Hardware interface
+  auto *hybrid_joint_interface = robot_hw->get<HybridJointInterface>();
+  std::vector<std::string> joint_names{"LF_HAA", "LF_HFE", "LF_KFE", "RF_HAA", "RF_HFE", "RF_KFE",
+                                       "LH_HAA", "LH_HFE", "LH_KFE", "RH_HAA", "RH_HFE", "RH_KFE"};
+  for (const auto &joint_name : joint_names)
+    hybrid_joint_handles_.push_back(hybrid_joint_interface->getHandle(joint_name));
+
+  imu_sensor_handle_ = robot_hw->get<hardware_interface::ImuSensorInterface>()->getHandle("unitree_imu");
 
   // init publisher and subscriber
   base_state_sub_ = controller_nh.subscribe("/gazebo/model_states", 1, &LeggedRLController::baseStateRecCallback, this);
@@ -89,8 +91,8 @@ void LeggedRLController::update(const ros::Time &time, const ros::Duration &peri
     return;
   } else if (mode_ == Mode::WALK) {
     if (loop_count_ % robot_cfg_.control_cfg.decimation == 0) {
-      auto obs = computeObservation(time, period);
-      actions_ = computeInput(obs);
+      computeObservation(time, period);
+      computeActions();
     }
 
     // limit action range
@@ -135,41 +137,24 @@ void LeggedRLController::loadPolicyModel(const std::string &policy_file_path) {
   }
 }
 
-std::vector<float> LeggedRLController::computeInput(std::vector<tensor_element_t>& obs) {
+void LeggedRLController::computeActions() {
   // create input tensor object
-  Eigen::Map<Eigen::Matrix<tensor_element_t, 235, 1>> observation(obs.data(), obs.size(), 1);
-
   Ort::MemoryInfo
-      memoryInfo = Ort::MemoryInfo::CreateCpu(OrtAllocatorType::OrtArenaAllocator, OrtMemType::OrtMemTypeDefault);
-  std::vector<Ort::Value> inputValues;
-  inputValues.push_back(Ort::Value::CreateTensor<tensor_element_t>(memoryInfo, observation.data(), observation.size(),
-                                                                   input_shapes_[0].data(), input_shapes_[0].size()));
+      memory_info = Ort::MemoryInfo::CreateCpu(OrtAllocatorType::OrtArenaAllocator, OrtMemType::OrtMemTypeDefault);
+  std::vector<Ort::Value> input_values;
+  input_values.push_back(Ort::Value::CreateTensor<tensor_element_t>(memory_info, observations_.data(), observations_.size(),
+                                                                    input_shapes_[0].data(), input_shapes_[0].size()));
   // run inference
-  Ort::RunOptions runOptions;
+  Ort::RunOptions run_options;
   std::vector<Ort::Value>
-      outputValues = session_ptr_->Run(runOptions, input_names_.data(), inputValues.data(), 1, output_names_.data(), 1);
-  std::vector<float> actions(output_shapes_[0][0]);
-  for (int i = 0; i < actions.size(); i++) {
-    actions[i] = *(outputValues[0].GetTensorMutableData<tensor_element_t>() + i);
+      output_values = session_ptr_->Run(run_options, input_names_.data(), input_values.data(), 1, output_names_.data(), 1);
+
+  for (int i = 0; i < actions_size_; i++) {
+    actions_[i] = *(output_values[0].GetTensorMutableData<tensor_element_t>() + i);
   }
-  // evaluate output tensor object
-//  Eigen::Map<Eigen::Matrix<tensor_element_t, Eigen::Dynamic, 1>> action(outputValues[0].GetTensorMutableData<tensor_element_t>(),
-//                                                                        output_shapes[0][1], output_shapes[0][0]);
-
-  return actions;
 }
 
-void LeggedRLController::baseStateRecCallback(const gazebo_msgs::ModelStates &msg) {
-  base_lin_vel_.x() = msg.twist[1].linear.x;
-  base_lin_vel_.y() = msg.twist[1].linear.y;
-  base_lin_vel_.z() = msg.twist[1].linear.z;
-
-  base_position_.x() = msg.pose[1].position.x;
-  base_position_.y() = msg.pose[1].position.y;
-  base_position_.z() = msg.pose[1].position.z;
-}
-
-std::vector<float> LeggedRLController::computeObservation(const ros::Time &time, const ros::Duration &period) {
+void LeggedRLController::computeObservation(const ros::Time &time, const ros::Duration &period) {
   // Angular from IMU
   Eigen::Quaternion<scalar_t> quat(imu_sensor_handle_.getOrientation()[3], imu_sensor_handle_.getOrientation()[0],
                                    imu_sensor_handle_.getOrientation()[1], imu_sensor_handle_.getOrientation()[2]);
@@ -191,7 +176,7 @@ std::vector<float> LeggedRLController::computeObservation(const ros::Time &time,
   Eigen::Matrix<scalar_t, 3, 1> projected_gravity(inverse_rot * gravity_vector);
 
   // command
-  Eigen::Matrix<scalar_t, 3, 1> command(0.3, 0.0, 0);
+  Eigen::Matrix<scalar_t, 3, 1> command(-0.3, 0.0, 0);
 
   // dof position and dof velocity
   Eigen::Matrix<scalar_t, 12, 1> dof_pose;
@@ -227,14 +212,24 @@ std::vector<float> LeggedRLController::computeObservation(const ros::Time &time,
       heights * obs_scales.height_measurements;
   // clang-format on
 
-  std::vector<tensor_element_t> obs_vector(obs.data(), obs.data() + obs.size());
+  for (Eigen::Matrix<scalar_t, 235, 1>::Index i = 0; i < obs.size(); i++) {
+    observations_[i] = obs(i);
+  }
   // Limit observation range
   scalar_t obs_min = -robot_cfg_.clip_obs;
   scalar_t obs_max = robot_cfg_.clip_obs;
-  std::transform(obs_vector.begin(), obs_vector.end(), obs_vector.begin(),
+  std::transform(observations_.begin(), observations_.end(), observations_.begin(),
                  [obs_min, obs_max](scalar_t x) { return std::max(obs_min, std::min(obs_max, x)); });
+}
 
-  return obs_vector;
+void LeggedRLController::baseStateRecCallback(const gazebo_msgs::ModelStates &msg) {
+  base_lin_vel_.x() = msg.twist[1].linear.x;
+  base_lin_vel_.y() = msg.twist[1].linear.y;
+  base_lin_vel_.z() = msg.twist[1].linear.z;
+
+  base_position_.x() = msg.pose[1].position.x;
+  base_position_.y() = msg.pose[1].position.y;
+  base_position_.z() = msg.pose[1].position.z;
 }
 
 bool LeggedRLController::parseCfg(ros::NodeHandle &nh) {
@@ -259,21 +254,24 @@ bool LeggedRLController::parseCfg(ros::NodeHandle &nh) {
   error += static_cast<int>(!nh.getParam("/LeggedRobotCfg/init_state/default_joint_angle/RH_HFE_joint", init_state.RH_HFE_joint));
   error += static_cast<int>(!nh.getParam("/LeggedRobotCfg/init_state/default_joint_angle/RH_KFE_joint", init_state.RH_KFE_joint));
 
-  error += static_cast<int>(nh.getParam("/LeggedRobotCfg/control/stiffness", control_cfg.stiffness));
-  error += static_cast<int>(nh.getParam("/LeggedRobotCfg/control/damping", control_cfg.damping));
-  error += static_cast<int>(nh.getParam("/LeggedRobotCfg/control/action_scale", control_cfg.action_scale));
-  error += static_cast<int>(nh.getParam("/LeggedRobotCfg/control/decimation", control_cfg.decimation));
+  error += static_cast<int>(!nh.getParam("/LeggedRobotCfg/control/stiffness", control_cfg.stiffness));
+  error += static_cast<int>(!nh.getParam("/LeggedRobotCfg/control/damping", control_cfg.damping));
+  error += static_cast<int>(!nh.getParam("/LeggedRobotCfg/control/action_scale", control_cfg.action_scale));
+  error += static_cast<int>(!nh.getParam("/LeggedRobotCfg/control/decimation", control_cfg.decimation));
 
-  error += static_cast<int>(nh.getParam("/LeggedRobotCfg/normalization/clip_scales/clip_observations", robot_cfg_.clip_obs));
-  error += static_cast<int>(nh.getParam("/LeggedRobotCfg/normalization/clip_scales/clip_actions", robot_cfg_.clip_actions));
+  error += static_cast<int>(!nh.getParam("/LeggedRobotCfg/normalization/clip_scales/clip_observations", robot_cfg_.clip_obs));
+  error += static_cast<int>(!nh.getParam("/LeggedRobotCfg/normalization/clip_scales/clip_actions", robot_cfg_.clip_actions));
 
-  error += static_cast<int>(nh.getParam("/LeggedRobotCfg/normalization/obs_scales/lin_vel", obs_scales.lin_vel));
-  error += static_cast<int>(nh.getParam("/LeggedRobotCfg/normalization/obs_scales/ang_vel", obs_scales.ang_vel));
-  error += static_cast<int>(nh.getParam("/LeggedRobotCfg/normalization/obs_scales/dof_pos", obs_scales.dof_pos));
-  error += static_cast<int>(nh.getParam("/LeggedRobotCfg/normalization/obs_scales/dof_vel", obs_scales.dof_vel));
-  error += static_cast<int>(nh.getParam("/LeggedRobotCfg/normalization/obs_scales/height_measurements", obs_scales.height_measurements));
+  error += static_cast<int>(!nh.getParam("/LeggedRobotCfg/normalization/obs_scales/lin_vel", obs_scales.lin_vel));
+  error += static_cast<int>(!nh.getParam("/LeggedRobotCfg/normalization/obs_scales/ang_vel", obs_scales.ang_vel));
+  error += static_cast<int>(!nh.getParam("/LeggedRobotCfg/normalization/obs_scales/dof_pos", obs_scales.dof_pos));
+  error += static_cast<int>(!nh.getParam("/LeggedRobotCfg/normalization/obs_scales/dof_vel", obs_scales.dof_vel));
+  error += static_cast<int>(!nh.getParam("/LeggedRobotCfg/normalization/obs_scales/height_measurements", obs_scales.height_measurements));
 
-  return (error > 0);
+  error += static_cast<int>(!nh.getParam("/LeggedRobotCfg/size/actions_size", actions_size_));
+  error += static_cast<int>(!nh.getParam("/LeggedRobotCfg/size/observations_size", observation_size_));
+
+  return (error == 0);
 }
 
 }  // namespace legged
