@@ -39,7 +39,7 @@ bool LeggedRLController::init(hardware_interface::RobotHW *robot_hw, ros::NodeHa
                                              robot_cfg_.init_state.LH_HAA_joint, robot_cfg_.init_state.LH_HFE_joint,
                                              robot_cfg_.init_state.LH_KFE_joint, robot_cfg_.init_state.RH_HAA_joint,
                                              robot_cfg_.init_state.RH_HFE_joint, robot_cfg_.init_state.RH_KFE_joint};
-  for (size_t i = 0; i < default_joint_angles.size(); i++) {
+  for (int i = 0; i < default_joint_angles.size(); i++) {
     default_joint_angles_(i, 0) = default_joint_angles[i];
   }
 
@@ -96,13 +96,13 @@ void LeggedRLController::update(const ros::Time &time, const ros::Duration &peri
     }
 
     // limit action range
-    double action_min = -robot_cfg_.clip_actions;
-    double action_max = robot_cfg_.clip_actions;
+    scalar_t action_min = -robot_cfg_.clip_actions;
+    scalar_t action_max = robot_cfg_.clip_actions;
     std::transform(actions_.begin(), actions_.end(), actions_.begin(),
-                   [action_min, action_max](double x) { return std::max(action_min, std::min(action_max, x)); });
+                   [action_min, action_max](scalar_t x) { return std::max(action_min, std::min(action_max, x)); });
     // set action
-    for (size_t i = 0; i < hybrid_joint_handles_.size(); i++) {
-      double pos_des = actions_[i] * robot_cfg_.control_cfg.action_scale + default_joint_angles_(i, 0);
+    for (int i = 0; i < hybrid_joint_handles_.size(); i++) {
+      scalar_t pos_des = actions_[i] * robot_cfg_.control_cfg.action_scale + default_joint_angles_(i, 0);
       hybrid_joint_handles_[i].setCommand(pos_des, 0, robot_cfg_.control_cfg.stiffness,
                                           robot_cfg_.control_cfg.damping, 0);
       last_actions_(i, 0) = actions_[i];
@@ -114,6 +114,7 @@ void LeggedRLController::update(const ros::Time &time, const ros::Duration &peri
 
 void LeggedRLController::loadPolicyModel(const std::string &policy_file_path) {
   policy_file_path_ = policy_file_path;
+  ROS_INFO_STREAM("Load Onnx model from path : " << policy_file_path);
 
   // create env
   onnx_env_prt_.reset(new Ort::Env(ORT_LOGGING_LEVEL_WARNING, "LeggedOnnxController"));
@@ -135,6 +136,8 @@ void LeggedRLController::loadPolicyModel(const std::string &policy_file_path) {
     output_names_.push_back(session_ptr_->GetOutputName(i, allocator));
     output_shapes_.push_back(session_ptr_->GetOutputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape());
   }
+
+  ROS_INFO_STREAM("Load Onnx model from successfully !!!");
 }
 
 void LeggedRLController::computeActions() {
@@ -213,7 +216,7 @@ void LeggedRLController::computeObservation(const ros::Time &time, const ros::Du
   // clang-format on
 
   for (Eigen::Matrix<scalar_t, 235, 1>::Index i = 0; i < obs.size(); i++) {
-    observations_[i] = obs(i);
+    observations_[i] = static_cast<tensor_element_t>(obs(i));
   }
   // Limit observation range
   scalar_t obs_min = -robot_cfg_.clip_obs;
