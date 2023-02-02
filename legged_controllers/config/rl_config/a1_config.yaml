@@ -37,4 +37,4 @@ LeggedRobotCfg:
       height_measurements : 5.0
 
 module:
-  module_path : "/home/luohx/catkin_ws/src/unitree_ros/reinforce_controller/policy/rough_a1/exported/policies/policy_1.pt"
+  module_path : "/home/luohx/catkin_ws/src/legged_control/legged_controllers/policy/policy_1.onnx"

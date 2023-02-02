@@ -7,10 +7,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 ## TODO: change absolute path to param
 set(Torch_DIR /home/luohx/Library/libtorch/share/cmake/Torch)
 
-## libtorch path
-## TODO: change absolute path to param
-set(Torch_DIR /home/luohx/Library/libtorch/share/cmake/Torch)
-
 ## Find catkin macros and libraries
 find_package(catkin REQUIRED
         COMPONENTS
@@ -26,6 +22,7 @@ find_package(catkin REQUIRED
         )
 
 find_package(Torch REQUIRED)
+find_package(onnxruntime REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(pinocchio REQUIRED pinocchio)
 
@@ -44,6 +41,8 @@ catkin_package(
         ocs2_legged_robot_ros
         ocs2_self_collision_visualization
         angles
+        DEPENDS
+        onnxruntime
 )
 
 ###########
@@ -81,6 +80,7 @@ target_link_libraries(rl_${PROJECT_NAME}
         ${catkin_LIBRARIES}
         ${pinocchio_LIBRARIES}
         ${TORCH_LIBRARIES}
+        onnxruntime
         )
 set_property(TARGET rl_${PROJECT_NAME} PROPERTY CXX_STANDARD 14)
 
