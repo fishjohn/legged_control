@@ -93,10 +93,12 @@ void LeggedRLController::update(const ros::Time &time, const ros::Duration &peri
       actions_ = computeInput(obs);
     }
 
+    // limit action range
     double action_min = -robot_cfg_.clip_actions;
     double action_max = robot_cfg_.clip_actions;
     std::transform(actions_.begin(), actions_.end(), actions_.begin(),
                    [action_min, action_max](double x) { return std::max(action_min, std::min(action_max, x)); });
+    // set action
     for (size_t i = 0; i < hybrid_joint_handles_.size(); i++) {
       double pos_des = actions_[i] * robot_cfg_.control_cfg.action_scale + default_joint_angles_(i, 0);
       hybrid_joint_handles_[i].setCommand(pos_des, 0, robot_cfg_.control_cfg.stiffness,
@@ -226,6 +228,7 @@ std::vector<float> LeggedRLController::computeObservation(const ros::Time &time,
   // clang-format on
 
   std::vector<tensor_element_t> obs_vector(obs.data(), obs.data() + obs.size());
+  // Limit observation range
   scalar_t obs_min = -robot_cfg_.clip_obs;
   scalar_t obs_max = robot_cfg_.clip_obs;
   std::transform(obs_vector.begin(), obs_vector.end(), obs_vector.begin(),
