@@ -9,6 +9,7 @@
 #include <legged_common/hardware_interface/ContactSensorInterface.h>
 #include <legged_estimation/StateEstimateBase.h>
 #include <legged_estimation/LinearKalmanFilter.h>
+#include <legged_interface/LeggedInterface.h>
 #include <hardware_interface/imu_sensor_interface.h>
 #include <gazebo_msgs/ModelStates.h>
 #include <std_msgs/Float32MultiArray.h>
@@ -96,21 +97,21 @@ public:
   void stopping(const ros::Time& time) override;
 
 protected:
+  virtual void setupStateEstimate(const std::string& task_file, const std::string& urdf_file,
+                                  const std::string& reference_file);
   bool parseCfg(ros::NodeHandle& nh);
-
   void loadPolicyModel(const std::string& policy_file_path);
-
   void computeActions();
   void computeObservation(const ros::Time& time, const ros::Duration& period);
 
   void baseStateRecCallback(const gazebo_msgs::ModelStates& msg);
 
-//  std::shared_ptr<LeggedInterface> legged_interface_;
   std::shared_ptr<StateEstimateBase> state_estimate_;
 
   std::vector<scalar_t> init_joint_angles_;
   std::vector<HybridJointHandle> hybrid_joint_handles_;
-  hardware_interface::ImuSensorHandle imu_sensor_handle_;
+  hardware_interface::ImuSensorHandle imu_sensor_handles_;
+  std::vector<ContactSensorHandle> contact_handles_;
 
 private:
   std::atomic_bool controller_running_;
@@ -140,6 +141,7 @@ private:
 
   // temp state
   RobotCfg robot_cfg_{};
+  vector_t rbd_state_;
   Eigen::Matrix<scalar_t, 3, 1> command_;
   Eigen::Matrix<scalar_t, 3, 1> base_lin_vel_;
   Eigen::Matrix<scalar_t, 3, 1> base_position_;
