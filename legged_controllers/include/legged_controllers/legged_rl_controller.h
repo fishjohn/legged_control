@@ -104,6 +104,7 @@ protected:
   void computeActions();
   void computeObservation(const ros::Time& time, const ros::Duration& period);
 
+  void cmdVelCallback(const geometry_msgs::Twist &msg);
   void baseStateRecCallback(const gazebo_msgs::ModelStates& msg);
 
   std::shared_ptr<StateEstimateBase> state_estimate_;
@@ -119,6 +120,7 @@ private:
   Mode mode_;
 
   // publisher & subscriber
+  ros::Subscriber cmd_vel_sub_;
   ros::Subscriber base_state_sub_;
 
   // stand

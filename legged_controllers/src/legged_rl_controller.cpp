@@ -24,7 +24,7 @@ LeggedRLController::~LeggedRLController()
 
 bool LeggedRLController::init(hardware_interface::RobotHW* robot_hw, ros::NodeHandle& controller_nh)
 {
-  // Initialize OCS2
+  // Get config file
   std::string task_file;
   std::string urdf_file;
   std::string reference_file;
@@ -86,7 +86,7 @@ bool LeggedRLController::init(hardware_interface::RobotHW* robot_hw, ros::NodeHa
   setupStateEstimate(task_file, urdf_file, reference_file);
 
   // init publisher and subscriber
-    base_state_sub_ = controller_nh.subscribe("/gazebo/model_states", 1, &LeggedRLController::baseStateRecCallback, this);
+  cmd_vel_sub_ = controller_nh.subscribe("/cmd_vel", 1, &LeggedRLController::cmdVelCallback, this);
   return true;
 }
 
@@ -265,7 +265,7 @@ void LeggedRLController::computeObservation(const ros::Time& time, const ros::Du
   Eigen::Matrix<scalar_t, 3, 1> projected_gravity(inverse_rot * gravity_vector);
 
   // command
-  Eigen::Matrix<scalar_t, 3, 1> command(0.3, 0.0, 0);
+  Eigen::Matrix<scalar_t, 3, 1> command = command_;
 
   // dof position and dof velocity
   Eigen::Matrix<scalar_t, 12, 1> dof_pose;
@@ -323,6 +323,13 @@ void LeggedRLController::baseStateRecCallback(const gazebo_msgs::ModelStates& ms
   base_position_.x() = msg.pose[1].position.x;
   base_position_.y() = msg.pose[1].position.y;
   base_position_.z() = msg.pose[1].position.z;
+}
+
+void LeggedRLController::cmdVelCallback(const geometry_msgs::Twist& msg)
+{
+  command_[0] = msg.linear.x;
+  command_[1] = msg.linear.y;
+  command_[2] = msg.linear.z;
 }
 
 bool LeggedRLController::parseCfg(ros::NodeHandle& nh)
