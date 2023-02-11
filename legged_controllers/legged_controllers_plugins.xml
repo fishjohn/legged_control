@@ -13,4 +13,11 @@
             The basic legged controller with cheat state estimator
         </description>
     </class>
+
+    <class name="legged/LeggedCMPCController" type="legged::LeggedCMPCController"
+           base_class_type="controller_interface::ControllerBase">
+        <description>
+            The basic legged controller with convex mpc
+        </description>
+    </class>
 </library>

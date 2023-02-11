@@ -29,6 +29,7 @@
           output="screen" args="load
           controllers/joint_state_controller
           controllers/legged_controller
+          controllers/legged_cmpc_controller
 "/>
 
     <node pkg="ocs2_legged_robot_ros" type="legged_robot_gait_command" name="legged_robot_gait_command"

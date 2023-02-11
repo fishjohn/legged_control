@@ -7,6 +7,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(catkin REQUIRED
         COMPONENTS
         roscpp
+        dynamic_reconfigure
         legged_common
         legged_interface
         legged_wbc
@@ -19,6 +20,10 @@ find_package(catkin REQUIRED
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(pinocchio REQUIRED pinocchio)
+
+generate_dynamic_reconfigure_options(
+        cfg/Weight.cfg
+)
 
 catkin_package(
         INCLUDE_DIRS
@@ -54,6 +59,12 @@ link_directories(
 ## Declare a cpp library
 add_library(${PROJECT_NAME}
         src/LeggedController.cpp
+        src/LeggedCMPCController.cpp
+        src/ConvexMPCFormulation.cpp
+        )
+
+add_dependencies(${PROJECT_NAME}
+        ${PROJECT_NAME}_gencfg
         )
 
 target_link_libraries(${PROJECT_NAME}
