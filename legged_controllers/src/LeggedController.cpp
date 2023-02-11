@@ -27,12 +27,12 @@
 namespace legged {
 bool LeggedController::init(hardware_interface::RobotHW* robot_hw, ros::NodeHandle& controller_nh) {
   // Initialize OCS2
-  std::string taskFile;
   std::string urdfFile;
+  std::string taskFile;
   std::string referenceFile;
-  controller_nh.getParam("/task_file", taskFile);
-  controller_nh.getParam("/urdf_file", urdfFile);
-  controller_nh.getParam("/reference_file", referenceFile);
+  controller_nh.getParam("/urdfFile", urdfFile);
+  controller_nh.getParam("/taskFile", taskFile);
+  controller_nh.getParam("/referenceFile", referenceFile);
   bool verbose = false;
   loadData::loadCppDataType(taskFile, "legged_robot_interface.verbose", verbose);
 
@@ -139,7 +139,7 @@ void LeggedController::update(const ros::Time& time, const ros::Duration& period
   }
 
   for (size_t j = 0; j < leggedInterface_->getCentroidalModelInfo().actuatedDofNum; ++j) {
-    hybridJointHandles_[j].setCommand(posDes(j), velDes(j), 5, 3, torque(j));
+    hybridJointHandles_[j].setCommand(posDes(j), velDes(j), 0, 1, torque(j));
   }
 
   // Visualization
