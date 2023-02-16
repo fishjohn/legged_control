@@ -101,7 +101,8 @@ void LeggedController::starting(const ros::Time& time) {
 void LeggedController::update(const ros::Time& time, const ros::Duration& period) {
   // State Estimate
   currentObservation_.time += period.toSec();
-
+  modeNumber2StanceLeg(currentObservation_.mode);
+  dynamic_cast<KalmanFilterEstimate&>(*stateEstimate_).setContactFlag(modeNumber2StanceLeg(currentObservation_.mode));
   vector_t measuredRbdState = stateEstimate_->update(time, period);
   scalar_t yawLast = currentObservation_.state(9);
   currentObservation_.state = rbdConversions_->computeCentroidalStateFromRbdModel(measuredRbdState);
@@ -119,6 +120,7 @@ void LeggedController::update(const ros::Time& time, const ros::Duration& period
   vector_t optimizedInput;
   size_t plannedMode = 0;  // The mode that is active at the time the policy is evaluated at.
   mpcMrtInterface_->evaluatePolicy(currentObservation_.time, currentObservation_.state, optimizedState, optimizedInput, plannedMode);
+  currentObservation_.mode = plannedMode;
 
   // Whole body control
   currentObservation_.input = optimizedInput;

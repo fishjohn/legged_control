@@ -8,6 +8,7 @@
 
 #include <ocs2_centroidal_model/CentroidalModelPinocchioMapping.h>
 #include <ocs2_pinocchio_interface/PinocchioEndEffectorKinematics.h>
+#include <ocs2_legged_robot/gait/MotionPhaseDefinition.h>
 
 #include <realtime_tools/realtime_buffer.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
@@ -24,6 +25,10 @@ class KalmanFilterEstimate : public StateEstimateBase {
                        const std::vector<ContactSensorHandle>& contactSensorHandles,
                        const hardware_interface::ImuSensorHandle& imuSensorHandle);
   vector_t update(const ros::Time& time, const ros::Duration& period) override;
+
+  void setContactFlag(const contact_flag_t contactFlag){
+    contactFlag_ = contactFlag;
+  }
 
  private:
   void updateFromTopic();
@@ -42,6 +47,8 @@ class KalmanFilterEstimate : public StateEstimateBase {
 
   scalar_t footRadius_ = 0.02;
   vector_t feetHeights_;
+
+  contact_flag_t contactFlag_;
 
   // Topic
   ros::Subscriber sub_;
