@@ -78,6 +78,19 @@ target_link_libraries(legged_target_trajectories_publisher
         )
 target_compile_options(legged_target_trajectories_publisher PRIVATE ${OCS2_CXX_FLAGS})
 
+# Motion recorder node
+add_executable(motion_recorder
+        src/MotionDataGenerator.cpp
+        )
+add_dependencies(motion_recorder
+        ${PROJECT_NAME}
+        ${catkin_EXPORTED_TARGETS})
+target_link_libraries(motion_recorder
+        ${PROJECT_NAME}
+        ${catkin_LIBRARIES})
+target_compile_options(motion_recorder PRIVATE ${OCS2_CXX_FLAGS})
+
+
 #########################
 ###   CLANG TOOLING   ###
 #########################
