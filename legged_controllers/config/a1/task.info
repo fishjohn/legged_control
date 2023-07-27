@@ -3,6 +3,8 @@ centroidalModelType             0      // 0: FullCentroidalDynamics, 1: Single R
 legged_robot_interface
 {
   verbose                               false  // show the loaded parameters
+  useAnalyticalGradientsDynamics        false
+  useAnalyticalGradientsConstraints     false
 }
 
 model_settings

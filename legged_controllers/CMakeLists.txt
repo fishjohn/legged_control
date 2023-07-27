@@ -78,6 +78,20 @@ target_link_libraries(legged_target_trajectories_publisher
         )
 target_compile_options(legged_target_trajectories_publisher PRIVATE ${OCS2_CXX_FLAGS})
 
+# Legged Sqp MPC node
+add_executable(legged_sqp_mpc_node
+        src/LeggedSqpMPCNode.cpp
+        )
+add_dependencies(legged_sqp_mpc_node
+        ${PROJECT_NAME}
+        ${catkin_EXPORTED_TARGETS}
+        )
+target_link_libraries(legged_sqp_mpc_node
+        ${PROJECT_NAME}
+        ${catkin_LIBRARIES}
+        )
+target_compile_options(legged_sqp_mpc_node PRIVATE ${OCS2_CXX_FLAGS})
+
 # Motion recorder node
 add_executable(motion_recorder
         src/MotionDataGenerator.cpp
