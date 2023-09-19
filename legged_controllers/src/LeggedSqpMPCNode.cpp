@@ -13,8 +13,6 @@
 
 #include "ocs2_legged_robot_ros/gait/GaitReceiver.h"
 
-#include "legged_controllers/MotionGenerator.h"
-
 using namespace ocs2;
 using namespace legged_robot;
 

@@ -16,6 +16,8 @@
 #include <ocs2_legged_robot/common/ModelSettings.h>
 #include <ocs2_robotic_tools/common/RotationTransforms.h>
 
+#include <boost/filesystem.hpp>
+
 #include "legged_common/third_party/json.hpp"
 #include "legged_controllers/MotionDataGenerator.h"
 
@@ -48,11 +50,11 @@ MotionDataGenerator::MotionDataGenerator(ros::NodeHandle& nh, const std::string&
   // command velocity publisher
   cmdVelPub_ = nh.advertise<geometry_msgs::Twist>("/cmd_vel", 1);
   // observation subscriber
-  obsSub_ = nh.subscribe<ocs2_msgs::mpc_observation>(topicPrefix + "_mpc_observation", 1, &MotionDataGenerator::observationCallback, this);
+  obsSub_ = nh.subscribe<ocs2_msgs::mpc_observation>(topicPrefix + "_mpc_observation", 10, &MotionDataGenerator::observationCallback, this);
 }
 
 void MotionDataGenerator::observationCallback(const ocs2_msgs::mpc_observation::ConstPtr& msg) {
-  std::lock_guard<std::mutex> lock(latestObservationMutex_);
+  //  std::lock_guard<std::mutex> lock(latestObservationMutex_);
 
   if (beginRecord_) {
     const auto curObservation = ros_msg_conversions::readObservationMsg(*msg);
@@ -81,7 +83,6 @@ void MotionDataGenerator::generate() {
 
     vector3_t accel = recordTasks_[i].middleTimeVel / (recordTasks_[i].trajTime / 2);
     vector3_t cmdVel(0.0, 0.0, 0.0);
-    std::cerr << "\n" << accel << std::endl;
 
     beginRecord_ = true;
     while (std::chrono::steady_clock::now() < endTime) {
@@ -161,7 +162,7 @@ vector_t MotionDataGenerator::convertDataFormat(const SystemObservation& observa
 
 void MotionDataGenerator::saveData(const std::vector<vector_t>& dataFrames) {
   std::string loopMode = "Wrap";
-  double frameDuration = 0.021;
+  double frameDuration = 0.02;
   bool enableCycleOffsetPosition = true;
   bool enableCycleOffsetRotation = true;
   double motionWeight = recordTasks_[currentTaskIndex_].motionWeight;
@@ -212,6 +213,9 @@ int main(int argc, char** argv) {
   nodeHandle.getParam("/taskFile", taskFile);
   nodeHandle.getParam("/referenceFile", referenceFile);
 
+  std::string dataSaveDir;
+  nodeHandle.getParam("/dataSetSaveDir", dataSaveDir);
+
   scalar_t totalTime = 30.0;  // s
   std::vector<std::string> trajNames = {"forward",       "backward",       "lateral_left",       "lateral_right",
                                         "left_steering", "right_steering", "combined_locomotion"};
@@ -240,7 +244,7 @@ int main(int argc, char** argv) {
     task.frameDuration = 0.02;
     task.middleTimeVel = middleTimeVels[i];
     task.motionWeight = 0.5;
-    task.recordFilePath = "/home/luohx/catkin_ws/output/" + trajNames[i] + ".json";
+    task.recordFilePath = dataSaveDir + trajNames[i] + ".json";
     recordTasks.push_back(task);
   }
 
